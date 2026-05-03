@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Harita Fetih Oyunu</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#e94560">
+<meta name="description" content="2 kişilik harita fetih oyunu">
+<meta name="application-name" content="Harita Fetih">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Harita Fetih">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;600;700;800&display=swap');
+
+  :root {
+    --bg: #0f0f1a;
+    --panel: #1a1a2e;
+    --border: #2a2a4a;
+    --accent: #e94560;
+    --gold: #f5a623;
+    --text: #e8e8f0;
+    --muted: #6b6b8a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* SCREENS */
+  .screen { display: none; min-height: 100vh; }
+  .screen.active { display: flex; flex-direction: column; }
+
+  /* ── MENU ── */
+  #screen-menu {
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(ellipse at 50% 0%, #1a1a4e 0%, var(--bg) 70%);
+  }
+
+  .menu-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(3rem, 8vw, 7rem);
+    letter-spacing: 6px;
+    background: linear-gradient(135deg, #e94560, #f5a623);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-align: center;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+
+  .menu-sub {
+    text-align: center;
+    color: var(--muted);
+    font-size: 1rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 48px;
+  }
+
+  .map-cards {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 48px;
+  }
+
+  .map-card {
+    width: 220px;
+    background: var(--panel);
+    border: 2px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all .25s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .map-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--accent), var(--gold));
+    opacity: 0;
+    transition: opacity .25s;
+  }
+
+  .map-card:hover::before, .map-card.selected::before { opacity: .12; }
+  .map-card.selected { border-color: var(--accent); }
+
+  .map-card-icon { font-size: 3rem; margin-bottom: 12px; position: relative; }
+  .map-card-name { font-size: 1.3rem; font-weight: 800; position: relative; }
+  .map-card-desc { font-size: .8rem; color: var(--muted); margin-top: 6px; position: relative; }
+
+  /* Player setup */
+  .player-setup {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 40px;
+  }
+
+  .player-box {
+    background: var(--panel);
+    border: 2px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    width: 220px;
+    text-align: center;
+  }
+
+  .player-box h3 {
+    font-size: 1rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+
+  .player-box input {
+    width: 100%;
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'Nunito', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    padding: 10px 12px;
+    text-align: center;
+    outline: none;
+    margin-bottom: 14px;
+    transition: border-color .2s;
+  }
+
+  .player-box input:focus { border-color: var(--accent); }
+
+  .color-row {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .color-dot {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 3px solid transparent;
+    transition: transform .15s, border-color .15s;
+  }
+
+  .color-dot:hover { transform: scale(1.15); }
+  .color-dot.chosen { border-color: white; transform: scale(1.2); }
+
+  .btn {
+    display: inline-block;
+    padding: 14px 36px;
+    border-radius: 50px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem;
+    letter-spacing: 3px;
+    cursor: pointer;
+    border: none;
+    transition: transform .15s, opacity .15s;
+  }
+
+  .btn:hover { transform: translateY(-2px); }
+  .btn:active { transform: translateY(0); }
+  .btn-primary { background: linear-gradient(135deg, var(--accent), var(--gold)); color: #fff; }
+  .btn-secondary { background: var(--panel); border: 2px solid var(--border); color: var(--text); }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+  /* ── GAME ── */
+  #screen-game {
+    flex-direction: row;
+    height: 100vh;
+  }
+
+  #sidebar {
+    width: 260px;
+    min-width: 220px;
+    background: var(--panel);
+    border-right: 2px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 20px 16px;
+    gap: 16px;
+    overflow-y: auto;
+  }
+
+  .sidebar-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.6rem;
+    letter-spacing: 3px;
+    color: var(--accent);
+    text-align: center;
+  }
+
+  .score-card {
+    border-radius: 12px;
+    padding: 14px;
+    text-align: center;
+    border: 2px solid transparent;
+    transition: border-color .3s;
+  }
+
+  .score-card.active-turn { border-color: white; box-shadow: 0 0 18px rgba(255,255,255,.15); }
+
+  .score-name { font-weight: 800; font-size: 1.1rem; }
+  .score-count { font-size: 2rem; font-weight: 800; font-family: 'Bebas Neue', sans-serif; }
+  .score-label { font-size: .75rem; color: rgba(255,255,255,.6); text-transform: uppercase; letter-spacing: 1px; }
+
+  .turn-info {
+    background: var(--bg);
+    border-radius: 12px;
+    padding: 14px;
+    text-align: center;
+    font-size: .85rem;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  .turn-info strong { color: var(--text); display: block; font-size: 1rem; margin-bottom: 4px; }
+
+  /* RPS overlay */
+  #rps-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.92);
+    z-index: 100;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px;
+    overflow-y: auto;
+  }
+
+  #rps-overlay.show { display: flex; }
+
+  .rps-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(1.4rem, 5vw, 2rem);
+    letter-spacing: 4px;
+    color: var(--gold);
+    text-align: center;
+  }
+
+  .rps-players {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    flex-wrap: nowrap;
+  }
+
+  .rps-player { text-align: center; flex: 1; }
+  .rps-player-name { font-weight: 800; margin-bottom: 8px; font-size: clamp(0.8rem, 3vw, 1rem); }
+
+  .rps-choices {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+  }
+
+  .rps-btn {
+    width: clamp(44px, 12vw, 60px);
+    height: clamp(44px, 12vw, 60px);
+    border-radius: 12px;
+    background: var(--panel);
+    border: 2px solid var(--border);
+    font-size: clamp(1.2rem, 4vw, 1.6rem);
+    cursor: pointer;
+    transition: all .2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .rps-btn:hover { border-color: var(--gold); transform: scale(1.1); }
+  .rps-btn.selected { border-color: white; background: #2a2a4e; }
+  .rps-btn:disabled { opacity: .3; cursor: not-allowed; }
+
+  .rps-vs {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(1.2rem, 4vw, 1.8rem);
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+
+  .rps-result {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(1rem, 4vw, 1.4rem);
+    letter-spacing: 2px;
+    min-height: 2rem;
+    text-align: center;
+    padding: 0 10px;
+  }
+
+  /* Map area */
+  #map-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+
+  #map-topbar {
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+  }
+
+  #map-topbar span { font-size: .9rem; color: var(--muted); }
+  #map-topbar strong { color: var(--gold); }
+
+  #map-svg-wrap {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+    cursor: grab;
+  }
+
+  #map-svg-wrap:active { cursor: grabbing; }
+
+  #map-svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .region {
+    stroke: #1a1a2e;
+    stroke-width: 0.5;
+    fill: #2a3a5a;
+    cursor: pointer;
+    transition: filter .15s;
+  }
+
+  .region:hover { filter: brightness(1.4); }
+  .region.taken { cursor: default; }
+  .region.taken:hover { filter: brightness(1.1); }
+
+  /* City selection overlay */
+  #city-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.8);
+    z-index: 90;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  #city-overlay.show { display: flex; }
+
+  .city-panel {
+    background: var(--panel);
+    border: 2px solid var(--border);
+    border-radius: 20px;
+    padding: 32px;
+    max-width: 480px;
+    width: 90%;
+  }
+
+  .city-panel h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.8rem;
+    letter-spacing: 3px;
+    color: var(--gold);
+    margin-bottom: 8px;
+  }
+
+  .city-panel p { color: var(--muted); font-size: .9rem; margin-bottom: 20px; }
+
+  .city-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: 16px;
+  }
+
+  .city-btn {
+    padding: 8px 14px;
+    border-radius: 8px;
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    color: var(--text);
+    font-family: 'Nunito', sans-serif;
+    font-size: .85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all .15s;
+  }
+
+  .city-btn:hover { border-color: var(--gold); color: var(--gold); }
+  .city-btn:disabled { opacity: .3; cursor: not-allowed; }
+
+  /* Win screen */
+  #screen-win {
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(ellipse at 50% 50%, #1a3a1a 0%, var(--bg) 70%);
+    gap: 24px;
+    text-align: center;
+  }
+
+  .win-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(3rem, 8vw, 6rem);
+    letter-spacing: 6px;
+    color: var(--gold);
+  }
+
+  .win-sub { color: var(--muted); font-size: 1rem; letter-spacing: 2px; }
+  .win-scores { display: flex; gap: 24px; flex-wrap: wrap; justify-content: center; }
+
+  /* Notification */
+  #notif {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-80px);
+    background: var(--panel);
+    border: 2px solid var(--gold);
+    border-radius: 12px;
+    padding: 12px 24px;
+    font-weight: 700;
+    font-size: .95rem;
+    z-index: 200;
+    transition: transform .3s ease;
+    white-space: nowrap;
+  }
+
+  #notif.show { transform: translateX(-50%) translateY(0); }
+
+  /* Start point overlay */
+  #start-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.85);
+    z-index: 95;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  #start-overlay.show { display: flex; }
+
+  @media (max-width: 700px) {
+    #screen-game { flex-direction: column; }
+    #sidebar { width: 100%; min-width: unset; flex-direction: row; flex-wrap: wrap; height: auto; }
+    .score-card { flex: 1; min-width: 120px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- MENU -->
+<div id="screen-menu" class="screen active">
+  <div class="menu-title">HARİTA<br>FETİH</div>
+  <div class="menu-sub">2 Oyunculu Strateji Oyunu</div>
+
+  <div class="map-cards">
+    <div class="map-card selected" data-map="turkey" onclick="selectMap(this)">
+      <div class="map-card-icon">🇹🇷</div>
+      <div class="map-card-name">Türkiye</div>
+      <div class="map-card-desc">81 İl</div>
+    </div>
+    <div class="map-card" data-map="world" onclick="selectMap(this)">
+      <div class="map-card-icon">🌍</div>
+      <div class="map-card-name">Dünya</div>
+      <div class="map-card-desc">195 Ülke</div>
+    </div>
+  </div>
+
+  <div class="player-setup">
+    <div class="player-box" id="p1box">
+      <h3>Oyuncu 1</h3>
+      <input type="text" id="p1name" value="Oyuncu 1" maxlength="12" />
+      <div class="color-row" id="p1colors"></div>
+    </div>
+    <div class="player-box" id="p2box">
+      <h3>Oyuncu 2</h3>
+      <input type="text" id="p2name" value="Oyuncu 2" maxlength="12" />
+      <div class="color-row" id="p2colors"></div>
+    </div>
+  </div>
+
+  <button class="btn btn-primary" onclick="startGame()">OYUNU BAŞLAT</button>
+</div>
+
+<!-- GAME -->
+<div id="screen-game" class="screen">
+  <div id="sidebar">
+    <div class="sidebar-title">FETİH</div>
+
+    <div class="score-card" id="score1">
+      <div class="score-name" id="sname1">P1</div>
+      <div class="score-count" id="scount1">0</div>
+      <div class="score-label">Bölge</div>
+    </div>
+
+    <div class="score-card" id="score2">
+      <div class="score-name" id="sname2">P2</div>
+      <div class="score-count" id="scount2">0</div>
+      <div class="score-label">Bölge</div>
+    </div>
+
+    <div class="turn-info" id="turn-info">
+      <strong id="ti-name">—</strong>
+      <span id="ti-desc">Taş Kağıt Makas oyna!</span>
+    </div>
+
+    <button class="btn btn-primary" id="rps-trigger-btn" onclick="openRPS()" style="width:100%;text-align:center;">✊ OYNA</button>
+    <button class="btn btn-secondary" onclick="backToMenu()" style="width:100%;text-align:center;font-size:1rem;">↩ MENÜ</button>
+  </div>
+
+  <div id="map-area">
+    <div id="map-topbar">
+      <span>Seçili Harita: <strong id="map-label">—</strong></span>
+      <span id="remaining-label">— bölge kaldı</span>
+    </div>
+    <div id="map-svg-wrap">
+      <svg id="map-svg" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+  </div>
+</div>
+
+<!-- WIN -->
+<div id="screen-win" class="screen">
+  <div class="win-title" id="win-title">KAZANDI!</div>
+  <div class="win-sub">Tüm bölgeler feth edildi</div>
+  <div class="win-scores" id="win-scores"></div>
+  <button class="btn btn-primary" onclick="backToMenu()">YENİDEN OYNA</button>
+</div>
+
+<!-- RPS OVERLAY -->
+<div id="rps-overlay">
+  <div class="rps-title">TAŞ KAĞIT MAKAS</div>
+  <div class="rps-players">
+    <div class="rps-player">
+      <div class="rps-player-name" id="rps-p1name">P1</div>
+      <div class="rps-choices" id="rps-p1choices">
+        <button class="rps-btn" data-player="1" data-choice="rock" onclick="rpsChoose(1,'rock')">🪨</button>
+        <button class="rps-btn" data-player="1" data-choice="paper" onclick="rpsChoose(1,'paper')">📄</button>
+        <button class="rps-btn" data-player="1" data-choice="scissors" onclick="rpsChoose(1,'scissors')">✂️</button>
+      </div>
+    </div>
+    <div class="rps-vs">VS</div>
+    <div class="rps-player">
+      <div class="rps-player-name" id="rps-p2name">P2</div>
+      <div class="rps-choices" id="rps-p2choices">
+        <button class="rps-btn" data-player="2" data-choice="rock" onclick="rpsChoose(2,'rock')">🪨</button>
+        <button class="rps-btn" data-player="2" data-choice="paper" onclick="rpsChoose(2,'paper')">📄</button>
+        <button class="rps-btn" data-player="2" data-choice="scissors" onclick="rpsChoose(2,'scissors')">✂️</button>
+      </div>
+    </div>
+  </div>
+  <div class="rps-result" id="rps-result"></div>
+  <button class="btn btn-secondary" id="rps-close-btn" onclick="closeRPS()" style="display:none;">KAPAT</button>
+</div>
+
+<!-- CITY SELECT OVERLAY -->
+<div id="city-overlay">
+  <div class="city-panel">
+    <h2 id="city-title">BÖLGENİ SEÇ</h2>
+    <p id="city-desc">Almak istediğin bölgeye tıkla</p>
+    <div class="city-grid" id="city-grid"></div>
+  </div>
+</div>
+
+<!-- START POINT OVERLAY -->
+<div id="start-overlay">
+  <div class="city-panel">
+    <h2>BAŞLANGIÇ NOKTALARI</h2>
+    <p id="start-p1-label">Oyuncu 1 başlangıç noktasını seç:</p>
+    <div class="city-grid" id="start-city-grid"></div>
+  </div>
+</div>
+
+<!-- NOTIFICATION -->
+<div id="notif"></div>
+
+<script>
+// ─────────────────────────────────────────────
+//  DATA
+// ─────────────────────────────────────────────
+const COLORS = ['#e94560','#3b82f6','#22c55e','#f59e0b','#a855f7','#ec4899','#14b8a6','#f97316'];
+
+// Turkey provinces with approximate SVG paths (simplified polygons for 81 iller)
+// Using a simplified representation
+const TURKEY_REGIONS = [
+  {id:'istanbul',name:'İstanbul',d:'M 195,95 L 220,90 L 230,105 L 215,115 L 195,110 Z'},
+  {id:'ankara',name:'Ankara',d:'M 420,140 L 460,135 L 470,160 L 445,175 L 415,165 Z'},
+  {id:'izmir',name:'İzmir',d:'M 170,175 L 205,168 L 215,195 L 195,210 L 165,200 Z'},
+  {id:'bursa',name:'Bursa',d:'M 240,110 L 275,105 L 282,128 L 260,138 L 235,130 Z'},
+  {id:'antalya',name:'Antalya',d:'M 320,285 L 380,278 L 392,308 L 360,325 L 315,315 Z'},
+  {id:'adana',name:'Adana',d:'M 480,255 L 525,248 L 535,275 L 505,290 L 475,280 Z'},
+  {id:'konya',name:'Konya',d:'M 380,200 L 440,195 L 450,230 L 415,245 L 375,235 Z'},
+  {id:'gaziantep',name:'Gaziantep',d:'M 510,285 L 548,280 L 556,305 L 530,318 L 505,308 Z'},
+  {id:'mersin',name:'Mersin',d:'M 425,270 L 478,265 L 487,292 L 458,305 L 420,295 Z'},
+  {id:'diyarbakir',name:'Diyarbakır',d:'M 590,230 L 640,225 L 650,255 L 618,268 L 585,258 Z'},
+  {id:'hatay',name:'Hatay',d:'M 490,305 L 520,298 L 528,328 L 505,340 L 486,330 Z'},
+  {id:'manisa',name:'Manisa',d:'M 200,155 L 238,150 L 246,175 L 222,188 L 196,178 Z'},
+  {id:'kocaeli',name:'Kocaeli',d:'M 255,92 L 290,88 L 296,108 L 274,118 L 250,110 Z'},
+  {id:'samsun',name:'Samsun',d:'M 460,68 L 510,62 L 520,88 L 490,98 L 455,90 Z'},
+  {id:'trabzon',name:'Trabzon',d:'M 560,58 L 605,54 L 614,78 L 585,88 L 556,82 Z'},
+  {id:'erzurum',name:'Erzurum',d:'M 640,118 L 690,113 L 700,142 L 668,155 L 635,147 Z'},
+  {id:'van',name:'Van',d:'M 720,185 L 768,180 L 776,210 L 746,222 L 715,214 Z'},
+  {id:'sakarya',name:'Sakarya',d:'M 283,92 L 315,88 L 322,108 L 300,118 L 278,112 Z'},
+  {id:'tekirdag',name:'Tekirdağ',d:'M 148,82 L 188,78 L 196,98 L 173,108 L 144,102 Z'},
+  {id:'edirne',name:'Edirne',d:'M 110,70 L 148,66 L 155,88 L 130,98 L 106,91 Z'},
+  {id:'canakkale',name:'Çanakkale',d:'M 148,108 L 188,104 L 196,128 L 173,140 L 144,133 Z'},
+  {id:'balikesir',name:'Balıkesir',d:'M 200,120 L 240,115 L 248,142 L 224,153 L 196,146 Z'},
+  {id:'kutahya',name:'Kütahya',d:'M 263,148 L 303,143 L 312,168 L 288,180 L 259,173 Z'},
+  {id:'eskisehir',name:'Eskişehir',d:'M 305,128 L 350,123 L 360,150 L 333,163 L 301,156 Z'},
+  {id:'afyon',name:'Afyon',d:'M 280,185 L 328,180 L 338,208 L 310,220 L 276,212 Z'},
+  {id:'usak',name:'Uşak',d:'M 238,185 L 278,180 L 287,205 L 262,218 L 234,210 Z'},
+  {id:'denizli',name:'Denizli',d:'M 245,215 L 295,209 L 305,238 L 276,252 L 241,244 Z'},
+  {id:'mugla',name:'Muğla',d:'M 218,245 L 268,240 L 278,268 L 248,282 L 214,274 Z'},
+  {id:'aydin',name:'Aydın',d:'M 198,210 L 244,205 L 253,232 L 226,245 L 194,237 Z'},
+  {id:'burdur',name:'Burdur',d:'M 290,250 L 335,244 L 345,273 L 316,287 L 286,279 Z'},
+  {id:'isparta',name:'Isparta',d:'M 318,228 L 363,223 L 373,252 L 344,265 L 313,257 Z'},
+  {id:'aksaray',name:'Aksaray',d:'M 388,185 L 425,180 L 433,208 L 407,220 L 383,212 Z'},
+  {id:'nigde',name:'Niğde',d:'M 430,215 L 472,210 L 481,238 L 452,251 L 425,243 Z'},
+  {id:'nevşehir',name:'Nevşehir',d:'M 420,190 L 460,185 L 469,210 L 443,223 L 415,215 Z'},
+  {id:'kayseri',name:'Kayseri',d:'M 468,168 L 515,162 L 525,192 L 495,205 L 463,197 Z'},
+  {id:'sivas',name:'Sivas',d:'M 510,130 L 568,124 L 578,158 L 545,172 L 506,164 Z'},
+  {id:'tokat',name:'Tokat',d:'M 490,95 L 538,90 L 548,115 L 516,128 L 485,121 Z'},
+  {id:'amasya',name:'Amasya',d:'M 448,88 L 490,83 L 499,108 L 470,120 L 443,113 Z'},
+  {id:'corum',name:'Çorum',d:'M 405,98 L 450,93 L 459,118 L 428,130 L 401,122 Z'},
+  {id:'kastamonu',name:'Kastamonu',d:'M 338,72 L 390,67 L 399,92 L 365,105 L 334,97 Z'},
+  {id:'sinop',name:'Sinop',d:'M 390,52 L 438,48 L 446,72 L 414,84 L 386,77 Z'},
+  {id:'bolu',name:'Bolu',d:'M 308,98 L 355,93 L 364,118 L 332,130 L 304,122 Z'},
+  {id:'zonguldak',name:'Zonguldak',d:'M 278,72 L 320,68 L 328,90 L 298,102 L 274,94 Z'},
+  {id:'bartin',name:'Bartın',d:'M 320,62 L 360,58 L 368,80 L 340,91 L 316,84 Z'},
+  {id:'karabuk',name:'Karabük',d:'M 345,88 L 383,83 L 392,108 L 362,120 L 340,112 Z'},
+  {id:'duzce',name:'Düzce',d:'M 290,80 L 325,76 L 332,98 L 308,108 L 285,100 Z'},
+  {id:'kirklareli',name:'Kırklareli',d:'M 128,62 L 160,58 L 167,80 L 145,90 L 124,83 Z'},
+  {id:'bilecik',name:'Bilecik',d:'M 295,118 L 325,113 L 333,136 L 312,146 L 290,139 Z'},
+  {id:'yalova',name:'Yalova',d:'M 255,108 L 283,104 L 290,122 L 270,132 L 250,125 Z'},
+  {id:'kibris',name:'KKTC',d:'M 400,355 L 440,349 L 448,372 L 420,383 L 395,376 Z'},
+  {id:'malatya',name:'Malatya',d:'M 558,188 L 603,182 L 613,212 L 582,226 L 553,218 Z'},
+  {id:'elazig',name:'Elazığ',d:'M 600,168 L 643,162 L 653,192 L 622,205 L 595,197 Z'},
+  {id:'tunceli',name:'Tunceli',d:'M 575,158 L 615,152 L 624,180 L 594,193 L 570,185 Z'},
+  {id:'bingol',name:'Bingöl',d:'M 625,158 L 665,152 L 675,180 L 645,193 L 620,185 Z'},
+  {id:'mus',name:'Muş',d:'M 665,185 L 708,180 L 718,208 L 687,222 L 660,214 Z'},
+  {id:'bitlis',name:'Bitlis',d:'M 690,205 L 730,200 L 740,228 L 710,241 L 685,233 Z'},
+  {id:'siirt',name:'Siirt',d:'M 660,240 L 700,235 L 710,262 L 680,275 L 655,267 Z'},
+  {id:'batman',name:'Batman',d:'M 635,228 L 670,222 L 679,250 L 650,263 L 630,255 Z'},
+  {id:'mardin',name:'Mardin',d:'M 608,265 L 650,259 L 660,287 L 630,300 L 603,292 Z'},
+  {id:'sanliurfa',name:'Şanlıurfa',d:'M 548,268 L 600,262 L 610,292 L 578,305 L 543,297 Z'},
+  {id:'adiyaman',name:'Adıyaman',d:'M 528,240 L 568,234 L 578,262 L 548,275 L 523,267 Z'},
+  {id:'kahramanmaras',name:'K.Maraş',d:'M 500,230 L 540,224 L 550,255 L 520,268 L 495,260 Z'},
+  {id:'osmaniye',name:'Osmaniye',d:'M 488,262 L 522,256 L 531,283 L 503,296 L 483,288 Z'},
+  {id:'kilis',name:'Kilis',d:'M 500,305 L 528,300 L 535,325 L 512,336 L 496,328 Z'},
+  {id:'agri',name:'Ağrı',d:'M 698,150 L 745,144 L 755,175 L 722,188 L 693,180 Z'},
+  {id:'igdir',name:'Iğdır',d:'M 748,152 L 788,147 L 797,172 L 767,185 L 743,177 Z'},
+  {id:'kars',name:'Kars',d:'M 718,115 L 762,110 L 770,138 L 740,150 L 713,142 Z'},
+  {id:'ardahan',name:'Ardahan',d:'M 680,98 L 722,92 L 730,118 L 702,130 L 675,122 Z'},
+  {id:'artvin',name:'Artvin',d:'M 640,78 L 680,73 L 688,97 L 660,109 L 635,101 Z'},
+  {id:'rize',name:'Rize',d:'M 603,65 L 640,60 L 648,82 L 620,93 L 598,86 Z'},
+  {id:'giresun',name:'Giresun',d:'M 550,68 L 590,63 L 598,87 L 570,98 L 545,91 Z'},
+  {id:'ordu',name:'Ordu',d:'M 510,72 L 550,67 L 558,92 L 530,103 L 505,96 Z'},
+  {id:'gumushane',name:'Gümüşhane',d:'M 605,92 L 648,87 L 657,115 L 625,128 L 600,120 Z'},
+  {id:'bayburt',name:'Bayburt',d:'M 618,108 L 658,102 L 667,130 L 635,143 L 610,135 Z'},
+  {id:'erzincan',name:'Erzincan',d:'M 578,128 L 625,122 L 635,152 L 602,165 L 573,157 Z'},
+  {id:'hakkari',name:'Hakkari',d:'M 730,258 L 770,252 L 779,280 L 750,294 L 725,286 Z'},
+  {id:'sirnak',name:'Şırnak',d:'M 690,268 L 730,262 L 740,290 L 710,304 L 685,296 Z'},
+  {id:'yozgat',name:'Yozgat',d:'M 458,140 L 500,135 L 509,162 L 480,175 L 453,167 Z'},
+  {id:'kirsehir',name:'Kırşehir',d:'M 420,162 L 462,157 L 471,183 L 443,196 L 415,188 Z'},
+];
+
+const WORLD_REGIONS = [
+  // Europe
+  {id:'france',name:'Fransa',d:'M 438,148 L 470,142 L 480,170 L 455,182 L 432,175 Z'},
+  {id:'germany',name:'Almanya',d:'M 468,118 L 510,112 L 520,142 L 492,155 L 462,148 Z'},
+  {id:'spain',name:'İspanya',d:'M 400,162 L 445,156 L 455,185 L 425,198 L 395,190 Z'},
+  {id:'italy',name:'İtalya',d:'M 475,158 L 505,150 L 518,185 L 495,198 L 468,190 Z'},
+  {id:'uk',name:'İngiltere',d:'M 415,108 L 445,103 L 453,128 L 430,140 L 410,133 Z'},
+  {id:'poland',name:'Polonya',d:'M 502,108 L 538,103 L 547,130 L 520,142 L 496,135 Z'},
+  {id:'ukraine',name:'Ukrayna',d:'M 540,118 L 595,112 L 605,142 L 570,156 L 534,148 Z'},
+  {id:'sweden',name:'İsveç',d:'M 490,72 L 525,67 L 533,95 L 508,106 L 484,99 Z'},
+  {id:'norway',name:'Norveç',d:'M 452,62 L 492,57 L 500,83 L 474,94 L 447,87 Z'},
+  {id:'finland',name:'Finlandiya',d:'M 528,62 L 568,57 L 577,85 L 550,96 L 523,89 Z'},
+  {id:'romania',name:'Romanya',d:'M 540,148 L 578,143 L 587,170 L 561,183 L 534,175 Z'},
+  {id:'greece',name:'Yunanistan',d:'M 510,180 L 540,175 L 548,202 L 525,214 L 505,207 Z'},
+  {id:'portugal',name:'Portekiz',d:'M 373,162 L 398,157 L 406,182 L 384,194 L 369,186 Z'},
+  {id:'netherlands',name:'Hollanda',d:'M 445,118 L 468,113 L 475,135 L 455,146 L 439,138 Z'},
+  {id:'belgium',name:'Belçika',d:'M 445,135 L 468,130 L 475,150 L 455,160 L 439,152 Z'},
+  {id:'switzerland',name:'İsviçre',d:'M 462,158 L 487,153 L 494,172 L 474,183 L 456,175 Z'},
+  {id:'austria',name:'Avusturya',d:'M 490,148 L 520,143 L 528,165 L 506,176 L 484,168 Z'},
+  {id:'czechia',name:'Çekya',d:'M 498,128 L 525,123 L 533,145 L 510,156 L 493,148 Z'},
+  {id:'hungary',name:'Macaristan',d:'M 518,155 L 548,150 L 556,172 L 533,184 L 512,176 Z'},
+  {id:'serbia',name:'Sırbistan',d:'M 520,172 L 548,167 L 556,192 L 532,204 L 514,197 Z'},
+  // Asia
+  {id:'russia',name:'Rusya',d:'M 590,60 L 850,54 L 860,130 L 730,145 L 580,135 Z'},
+  {id:'china',name:'Çin',d:'M 710,148 L 820,142 L 830,215 L 770,228 L 705,220 Z'},
+  {id:'india',name:'Hindistan',d:'M 662,188 L 720,182 L 730,248 L 698,261 L 657,253 Z'},
+  {id:'japan',name:'Japonya',d:'M 840,138 L 870,133 L 878,162 L 854,175 L 834,167 Z'},
+  {id:'turkey',name:'Türkiye',d:'M 548,172 L 605,165 L 615,195 L 582,208 L 542,200 Z'},
+  {id:'iran',name:'İran',d:'M 604,178 L 655,172 L 665,205 L 633,218 L 598,210 Z'},
+  {id:'saudi',name:'S.Arabistan',d:'M 590,210 L 645,204 L 655,240 L 620,253 L 584,245 Z'},
+  {id:'indonesia',name:'Endonezya',d:'M 782,238 L 865,232 L 875,260 L 835,273 L 776,265 Z'},
+  {id:'pakistan',name:'Pakistan',d:'M 648,175 L 698,169 L 708,205 L 676,218 L 642,210 Z'},
+  {id:'kazakhstan',name:'Kazakistan',d:'M 618,118 L 700,112 L 710,152 L 668,165 L 612,157 Z'},
+  {id:'myanmar',name:'Myanmar',d:'M 738,195 L 768,190 L 776,222 L 752,234 L 732,226 Z'},
+  {id:'vietnam',name:'Vietnam',d:'M 770,205 L 795,200 L 803,230 L 780,242 L 764,234 Z'},
+  {id:'thailand',name:'Tayland',d:'M 748,215 L 778,209 L 787,240 L 762,252 L 742,245 Z'},
+  {id:'malaysia',name:'Malezya',d:'M 770,240 L 800,234 L 808,262 L 785,274 L 764,266 Z'},
+  // Africa
+  {id:'nigeria',name:'Nijerya',d:'M 460,228 L 498,222 L 508,255 L 478,268 L 454,260 Z'},
+  {id:'ethiopia',name:'Etiyopya',d:'M 560,228 L 605,222 L 615,258 L 582,271 L 554,263 Z'},
+  {id:'egypt',name:'Mısır',d:'M 546,188 L 588,182 L 598,215 L 567,228 L 540,220 Z'},
+  {id:'southafrica',name:'G.Afrika',d:'M 516,318 L 562,312 L 572,348 L 540,361 L 510,353 Z'},
+  {id:'drc',name:'Kongo (DRC)',d:'M 508,262 L 558,256 L 568,295 L 535,308 L 502,300 Z'},
+  {id:'tanzania',name:'Tanzanya',d:'M 562,270 L 605,264 L 615,300 L 582,313 L 556,305 Z'},
+  {id:'kenya',name:'Kenya',d:'M 565,250 L 604,244 L 614,278 L 582,290 L 559,282 Z'},
+  {id:'algeria',name:'Cezayir',d:'M 432,178 L 490,172 L 500,215 L 464,228 L 426,220 Z'},
+  {id:'sudan',name:'Sudan',d:'M 548,210 L 598,204 L 608,242 L 572,255 L 542,247 Z'},
+  {id:'morocco',name:'Fas',d:'M 398,182 L 438,176 L 448,210 L 420,222 L 393,215 Z'},
+  // Americas
+  {id:'usa',name:'ABD',d:'M 148,148 L 292,142 L 302,205 L 220,218 L 142,210 Z'},
+  {id:'canada',name:'Kanada',d:'M 108,72 L 310,66 L 320,140 L 210,153 L 102,145 Z'},
+  {id:'brazil',name:'Brezilya',d:'M 245,248 L 342,242 L 352,318 L 292,330 L 239,322 Z'},
+  {id:'mexico',name:'Meksika',d:'M 115,195 L 200,189 L 210,228 L 170,240 L 109,232 Z'},
+  {id:'argentina',name:'Arjantin',d:'M 228,318 L 280,312 L 290,395 L 253,407 L 222,400 Z'},
+  {id:'colombia',name:'Kolombiya',d:'M 192,238 L 238,232 L 248,265 L 218,278 L 186,270 Z'},
+  {id:'peru',name:'Peru',d:'M 185,272 L 240,266 L 250,312 L 213,324 L 179,316 Z'},
+  {id:'venezuela',name:'Venezuela',d:'M 226,228 L 278,222 L 288,252 L 256,265 L 220,257 Z'},
+  {id:'chile',name:'Şili',d:'M 210,318 L 235,312 L 244,418 L 218,428 L 205,420 Z'},
+  // Oceania
+  {id:'australia',name:'Avustralya',d:'M 780,285 L 895,278 L 906,362 L 840,375 L 773,367 Z'},
+  {id:'newzealand',name:'Yeni Zelanda',d:'M 900,340 L 930,334 L 938,368 L 915,380 L 894,372 Z'},
+];
+
+// ─────────────────────────────────────────────
+//  STATE
+// ─────────────────────────────────────────────
+let state = {
+  map: 'turkey',
+  players: [
+    { name: 'Oyuncu 1', color: COLORS[0], score: 0 },
+    { name: 'Oyuncu 2', color: COLORS[2], score: 0 },
+  ],
+  regions: [],
+  ownership: {}, // regionId -> 0 or 1 (player index)
+  currentWinner: null, // who won rps, index
+  phase: 'rps', // 'rps' | 'pick'
+  startPhase: true,
+  startPicks: [null, null],
+};
+
+let rpsChoices = { 1: null, 2: null };
+
+// ─────────────────────────────────────────────
+//  MENU
+// ─────────────────────────────────────────────
+function buildColorPickers() {
+  ['p1colors','p2colors'].forEach((id, pi) => {
+    const wrap = document.getElementById(id);
+    wrap.innerHTML = '';
+    COLORS.forEach((c, ci) => {
+      const d = document.createElement('div');
+      d.className = 'color-dot' + (state.players[pi].color === c ? ' chosen' : '');
+      d.style.background = c;
+      d.onclick = () => {
+        const other = state.players[1 - pi].color;
+        if (c === other) { showNotif('Bu renk zaten seçili!'); return; }
+        state.players[pi].color = c;
+        buildColorPickers();
+      };
+      wrap.appendChild(d);
+    });
+  });
+}
+
+buildColorPickers();
+
+function selectMap(el) {
+  document.querySelectorAll('.map-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  state.map = el.dataset.map;
+}
+
+function startGame() {
+  state.players[0].name = document.getElementById('p1name').value || 'Oyuncu 1';
+  state.players[1].name = document.getElementById('p2name').value || 'Oyuncu 2';
+  state.players[0].score = 0;
+  state.players[1].score = 0;
+  state.ownership = {};
+  state.phase = 'rps';
+  state.startPhase = true;
+  state.startPicks = [null, null];
+
+  state.regions = state.map === 'turkey' ? TURKEY_REGIONS : WORLD_REGIONS;
+
+  showScreen('game');
+  buildMap();
+  updateSidebar();
+  document.getElementById('map-label').textContent = state.map === 'turkey' ? 'Türkiye' : 'Dünya';
+  document.getElementById('rps-trigger-btn').style.display = 'none';
+
+  // Start: choose start point
+  openStartOverlay();
+}
+
+// ─────────────────────────────────────────────
+//  MAP
+// ─────────────────────────────────────────────
+function buildMap() {
+  const svg = document.getElementById('map-svg');
+  svg.innerHTML = '';
+
+  // Set viewBox based on map
+  if (state.map === 'turkey') {
+    svg.setAttribute('viewBox', '100 50 720 340');
+  } else {
+    svg.setAttribute('viewBox', '80 50 900 420');
+  }
+
+  state.regions.forEach(r => {
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', r.d);
+    path.setAttribute('class', 'region');
+    path.setAttribute('id', 'region-' + r.id);
+    path.setAttribute('data-id', r.id);
+
+    const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+    title.textContent = r.name;
+    path.appendChild(title);
+
+    svg.appendChild(path);
+  });
+
+  updateRemainingLabel();
+}
+
+function colorRegion(regionId, playerIndex) {
+  const path = document.getElementById('region-' + regionId);
+  if (!path) return;
+  path.style.fill = state.players[playerIndex].color;
+  path.classList.add('taken');
+}
+
+function updateRemainingLabel() {
+  const taken = Object.keys(state.ownership).length;
+  const total = state.regions.length;
+  document.getElementById('remaining-label').textContent = `${total - taken} bölge kaldı`;
+}
+
+// ─────────────────────────────────────────────
+//  START PHASE
+// ─────────────────────────────────────────────
+function openStartOverlay() {
+  const overlay = document.getElementById('start-overlay');
+  const label = document.getElementById('start-p1-label');
+  const grid = document.getElementById('start-city-grid');
+
+  label.textContent = 'Oyunun başlayacağı bölgeyi seçin:';
+  label.style.color = '#f5a623';
+  grid.innerHTML = '';
+
+  state.regions.forEach(r => {
+    const btn = document.createElement('button');
+    btn.className = 'city-btn';
+    btn.textContent = r.name;
+    btn.onclick = () => {
+      // Both players start from this region — first player owns it
+      state.startPicks[0] = r.id;
+      state.ownership[r.id] = 0;
+      state.players[0].score++;
+      colorRegion(r.id, 0);
+      overlay.classList.remove('show');
+      state.startPhase = false;
+      document.getElementById('rps-trigger-btn').style.display = '';
+      updateSidebar();
+      updateRemainingLabel();
+      showNotif('Başlangıç noktası seçildi! Taş Kağıt Makas oynayın!');
+    };
+    grid.appendChild(btn);
+  });
+
+  overlay.classList.add('show');
+}
+
+// ─────────────────────────────────────────────
+//  RPS
+// ─────────────────────────────────────────────
+function openRPS() {
+  rpsChoices = { 1: null, 2: null };
+  document.getElementById('rps-result').textContent = '';
+  document.getElementById('rps-close-btn').style.display = 'none';
+  document.getElementById('rps-p1name').textContent = state.players[0].name;
+  document.getElementById('rps-p2name').textContent = state.players[1].name;
+  document.getElementById('rps-p1name').style.color = state.players[0].color;
+  document.getElementById('rps-p2name').style.color = state.players[1].color;
+
+  // Reset buttons
+  document.querySelectorAll('.rps-btn').forEach(b => {
+    b.classList.remove('selected');
+    b.disabled = false;
+  });
+
+  document.getElementById('rps-overlay').classList.add('show');
+}
+
+function rpsChoose(player, choice) {
+  rpsChoices[player] = choice;
+  // Disable that player's buttons, mark selected
+  document.querySelectorAll(`[data-player="${player}"]`).forEach(b => {
+    b.disabled = true;
+    if (b.dataset.choice === choice) b.classList.add('selected');
+  });
+
+  if (rpsChoices[1] && rpsChoices[2]) {
+    resolveRPS();
+  }
+}
+
+const RPS_EMOJI = { rock: '🪨', paper: '📄', scissors: '✂️' };
+
+function resolveRPS() {
+  const c1 = rpsChoices[1], c2 = rpsChoices[2];
+  let winner = null;
+  if (c1 === c2) winner = null;
+  else if ((c1 === 'rock' && c2 === 'scissors') ||
+           (c1 === 'paper' && c2 === 'rock') ||
+           (c1 === 'scissors' && c2 === 'paper')) winner = 0;
+  else winner = 1;
+
+  const resEl = document.getElementById('rps-result');
+
+  if (winner === null) {
+    resEl.textContent = 'BERABERE — Tekrar oynayın!';
+    resEl.style.color = '#f5a623';
+    setTimeout(() => {
+      rpsChoices = { 1: null, 2: null };
+      document.querySelectorAll('.rps-btn').forEach(b => { b.disabled = false; b.classList.remove('selected'); });
+      resEl.textContent = '';
+    }, 1500);
+    return;
+  }
+
+  resEl.textContent = `${RPS_EMOJI[c1]} vs ${RPS_EMOJI[c2]} — ${state.players[winner].name} KAZANDI!`;
+  resEl.style.color = state.players[winner].color;
+  state.currentWinner = winner;
+  document.getElementById('rps-close-btn').style.display = '';
+}
+
+function closeRPS() {
+  document.getElementById('rps-overlay').classList.remove('show');
+  // Open city pick for winner
+  openCityPick(state.currentWinner);
+}
+
+// ─────────────────────────────────────────────
+//  CITY PICK
+// ─────────────────────────────────────────────
+function openCityPick(playerIdx) {
+  const overlay = document.getElementById('city-overlay');
+  const title = document.getElementById('city-title');
+  const desc = document.getElementById('city-desc');
+  const grid = document.getElementById('city-grid');
+
+  title.textContent = `${state.players[playerIdx].name} — Bölge Seç`;
+  title.style.color = state.players[playerIdx].color;
+  desc.textContent = 'Almak istediğin bölgeyi seç';
+  grid.innerHTML = '';
+
+  const available = state.regions.filter(r => !(r.id in state.ownership));
+
+  if (available.length === 0) {
+    endGame();
+    return;
+  }
+
+  available.forEach(r => {
+    const btn = document.createElement('button');
+    btn.className = 'city-btn';
+    btn.textContent = r.name;
+    btn.onclick = () => {
+      state.ownership[r.id] = playerIdx;
+      state.players[playerIdx].score++;
+      colorRegion(r.id, playerIdx);
+      overlay.classList.remove('show');
+      updateSidebar();
+      updateRemainingLabel();
+      showNotif(`${r.name} → ${state.players[playerIdx].name}!`);
+
+      if (Object.keys(state.ownership).length >= state.regions.length) {
+        setTimeout(endGame, 600);
+      }
+    };
+    grid.appendChild(btn);
+  });
+
+  overlay.classList.add('show');
+}
+
+// ─────────────────────────────────────────────
+//  SIDEBAR
+// ─────────────────────────────────────────────
+function updateSidebar() {
+  state.players.forEach((p, i) => {
+    const card = document.getElementById(`score${i+1}`);
+    card.style.background = p.color + '22';
+    card.style.borderColor = p.color + '66';
+    document.getElementById(`sname${i+1}`).textContent = p.name;
+    document.getElementById(`scount${i+1}`).textContent = p.score;
+  });
+
+  document.getElementById('ti-name').textContent = '🎮 Oynayın!';
+  document.getElementById('ti-desc').textContent = 'Taş Kağıt Makas oynayarak bölge kazanın.';
+}
+
+// ─────────────────────────────────────────────
+//  END
+// ─────────────────────────────────────────────
+function endGame() {
+  showScreen('win');
+  const p0 = state.players[0], p1 = state.players[1];
+  let winnerName;
+  if (p0.score > p1.score) winnerName = p0.name;
+  else if (p1.score > p0.score) winnerName = p1.name;
+  else winnerName = 'BERABERE';
+
+  document.getElementById('win-title').textContent = winnerName === 'BERABERE' ? 'BERABERE!' : `${winnerName} KAZANDI!`;
+  document.getElementById('win-title').style.color = winnerName === 'BERABERE' ? '#f5a623' :
+    (winnerName === p0.name ? p0.color : p1.color);
+
+  const ws = document.getElementById('win-scores');
+  ws.innerHTML = '';
+  state.players.forEach(p => {
+    const card = document.createElement('div');
+    card.className = 'score-card';
+    card.style.background = p.color + '22';
+    card.style.border = `2px solid ${p.color}`;
+    card.style.padding = '24px 36px';
+    card.innerHTML = `<div class="score-name">${p.name}</div>
+      <div class="score-count">${p.score}</div>
+      <div class="score-label">Bölge</div>`;
+    ws.appendChild(card);
+  });
+}
+
+// ─────────────────────────────────────────────
+//  UTILS
+// ─────────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+}
+
+function backToMenu() {
+  document.getElementById('rps-overlay').classList.remove('show');
+  document.getElementById('city-overlay').classList.remove('show');
+  document.getElementById('start-overlay').classList.remove('show');
+  showScreen('menu');
+}
+
+let notifTimer;
+function showNotif(msg) {
+  const el = document.getElementById('notif');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(notifTimer);
+  notifTimer = setTimeout(() => el.classList.remove('show'), 2500);
+}
+</script>
+</body>
+</html>
