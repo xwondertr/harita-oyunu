@@ -1,0 +1,22 @@
+{
+  "name": "Harita Fetih Oyunu",
+  "short_name": "Harita Fetih",
+  "description": "2 kişilik harita fetih oyunu - Taş Kağıt Makas ile şehir kazan!",
+  "start_url": "/harita-oyunu/",
+  "display": "fullscreen",
+  "background_color": "#0f0f1a",
+  "theme_color": "#e94560",
+  "orientation": "landscape",
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/World%20map/3D/world_map_3d.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/World%20map/3D/world_map_3d.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
